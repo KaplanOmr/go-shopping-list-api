@@ -8,18 +8,15 @@ import (
 )
 
 func conDB() (*sql.DB, error) {
-	s, err := getSettings()
-	if err != nil {
-		return nil, err
-	}
+	getSettings()
 
 	ct := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		s["database"]["hostname"],
-		s["database"]["port"],
-		s["database"]["username"],
-		s["database"]["password"],
-		s["database"]["database"])
+		settings["database"]["hostname"],
+		settings["database"]["port"],
+		settings["database"]["username"],
+		settings["database"]["password"],
+		settings["database"]["database"])
 
 	db, err := sql.Open("postgres", ct)
 	if err != nil {

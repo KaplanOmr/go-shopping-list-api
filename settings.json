@@ -7,6 +7,11 @@
         "database": "postgres"
     },
     "server": {
-        "port": "8222"
+        "port": "8223"
+    },
+    "jwt": {
+        "pri": "./keys/pri",
+        "pub": "./keys/pub",
+        "exp": "15000"
     }
 }

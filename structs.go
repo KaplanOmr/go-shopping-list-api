@@ -1,5 +1,10 @@
 package main
 
+var (
+	userData interface{}
+	settings = getSettings()
+)
+
 type ErrorResponse struct {
 	Status    bool        `json:"status"`
 	ErrorCode int         `json:"error_code"`
@@ -13,7 +18,18 @@ type SuccessResponse struct {
 }
 
 type ListStruct struct {
-	ID     int    `json:"id"`
-	Title  string `json:"title"`
-	UserID int    `json:"user_id"`
+	ID        int    `json:"id"`
+	Title     string `json:"title"`
+	UserID    int    `json:"user_id"`
+	Status    int    `json:"status"`
+	CreatedAt int    `json:"created_at"`
+	UpdatedAt int    `json:"updated_at"`
+}
+
+type UserStruct struct {
+	ID       int
+	Username string
+	Password string
+	Name     string
+	Email    string
 }

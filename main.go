@@ -7,12 +7,7 @@ import (
 )
 
 func main() {
-	s, err := getSettings()
-	if err != nil {
-		panic(err)
-	}
-
-	if err = fasthttp.ListenAndServe(fmt.Sprintf(":%s", s["server"]["port"]), rootHandlers); err != nil {
+	if err := fasthttp.ListenAndServe(fmt.Sprintf(":%s", settings["server"]["port"]), rootHandlers); err != nil {
 		panic(err)
 	}
 }

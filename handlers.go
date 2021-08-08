@@ -1,12 +1,16 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/valyala/fasthttp"
 )
 
 func rootHandlers(ctx *fasthttp.RequestCtx) {
 	route := string(ctx.Request.RequestURI())
 	method := string(ctx.Request.Header.Method())
+
+	fmt.Println(string(ctx.Request.Header.Peek("Authorization")))
 
 	switch route {
 	case "/":
