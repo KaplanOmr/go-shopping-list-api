@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"strings"
 
 	"github.com/valyala/fasthttp"
 )
@@ -9,15 +9,30 @@ import (
 func rootHandlers(ctx *fasthttp.RequestCtx) {
 	route := string(ctx.Request.RequestURI())
 	method := string(ctx.Request.Header.Method())
+	as := strings.Split(string(ctx.Request.Header.Peek("Authorization")), " ")
 
-	fmt.Println(string(ctx.Request.Header.Peek("Authorization")))
+	if len(as) != 2 {
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 10004
+		respErr.ErrorMsg = "AUTHORIZATION_INVALID"
+
+		respError(ctx, respErr, 401)
+		return
+	}
+
+	token := as[1]
+
+	if !authCheck(ctx, token, route, []string{"/", "/register"}) {
+		return
+	}
 
 	switch route {
 	case "/":
-		allowedMethod(ctx, method, "GET")
 		mainHandler(ctx, method)
 	case "/register":
-		allowedMethod(ctx, method, "POST")
+		registerHandler(ctx, method)
 	default:
 		var resp ErrorResponse
 
@@ -31,14 +46,7 @@ func rootHandlers(ctx *fasthttp.RequestCtx) {
 
 func mainHandler(ctx *fasthttp.RequestCtx, method string) {
 
-	if method != "GET" {
-		var respErr ErrorResponse
-
-		respErr.Status = false
-		respErr.ErrorCode = 10002
-		respErr.ErrorMsg = "INVALID_REQUEST_METHOD"
-
-		respError(ctx, respErr, 400)
+	if !allowedMethod(ctx, method, "GET") {
 		return
 	}
 
@@ -51,5 +59,17 @@ func mainHandler(ctx *fasthttp.RequestCtx, method string) {
 }
 
 func registerHandler(ctx *fasthttp.RequestCtx, method string) {
+	if !allowedMethod(ctx, method, "POST") {
+		return
+	}
 
+	params := []string{
+		"ok",
+		"ok2",
+		"ok3",
+	}
+
+	if !reqParams(ctx, params) {
+		return
+	}
 }

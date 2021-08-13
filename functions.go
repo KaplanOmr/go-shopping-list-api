@@ -26,34 +26,34 @@ func getSettings() map[string]map[string]interface{} {
 	return s
 }
 
-func respError(ctx *fasthttp.RequestCtx, respErr ErrorResponse, statusCode int) error {
+func respError(ctx *fasthttp.RequestCtx, respErr ErrorResponse, statusCode int) {
+
 	rb, err := json.Marshal(respErr)
 
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	ctx.Response.SetStatusCode(statusCode)
 	ctx.Response.Header.Add("Content-Type", "application/json")
 	ctx.Response.SetBody(rb)
-	return nil
 }
 
-func respSuccess(ctx *fasthttp.RequestCtx, respSuccess SuccessResponse, statusCode int) error {
+func respSuccess(ctx *fasthttp.RequestCtx, respSuccess SuccessResponse, statusCode int) {
 	rb, err := json.Marshal(respSuccess)
 
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	ctx.Response.SetStatusCode(statusCode)
 	ctx.Response.Header.Add("Content-Type", "application/json")
 	ctx.Response.SetBody(rb)
-	return nil
 }
 
-func allowedMethod(ctx *fasthttp.RequestCtx, in string, allow string) {
+func allowedMethod(ctx *fasthttp.RequestCtx, in string, allow string) bool {
 	if in != allow {
+		fmt.Println("ok")
 		var respErr ErrorResponse
 
 		respErr.Status = false
@@ -61,8 +61,38 @@ func allowedMethod(ctx *fasthttp.RequestCtx, in string, allow string) {
 		respErr.ErrorMsg = "INVALID_REQUEST_METHOD"
 
 		respError(ctx, respErr, 400)
-		return
+
+		return false
 	}
+
+	return true
+}
+
+func reqParams(ctx *fasthttp.RequestCtx, params []string) bool {
+
+	c := true
+
+	for _, p := range params {
+		if !ctx.PostArgs().Has(p) {
+			c = false
+		}
+	}
+
+	if !c {
+		var resp ErrorResponse
+
+		resp.Status = false
+		resp.ErrorCode = 10010
+		resp.ErrorMsg = "REQUIRED_PARAMS_INVALID"
+		resp.Data = map[string][]string{
+			"required_params": params,
+		}
+
+		respError(ctx, resp, 200)
+
+	}
+
+	return c
 }
 
 func createToken() (string, error) {
@@ -103,13 +133,15 @@ func checkToken(tokenString string) bool {
 	signPub, err := getKeys("public")
 
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return false
 	}
 
 	signKey, err := jwt.ParseRSAPublicKeyFromPEM(signPub)
 
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return false
 	}
 
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
@@ -121,7 +153,8 @@ func checkToken(tokenString string) bool {
 	})
 
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return false
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
@@ -150,4 +183,28 @@ func getKeys(keyType string) ([]byte, error) {
 	}
 
 	return rf, nil
+}
+
+func authCheck(ctx *fasthttp.RequestCtx, token string, uri string, allow []string) bool {
+
+	c := false
+
+	for _, val := range allow {
+		if val == uri {
+			c = true
+		}
+	}
+
+	if !c && !checkToken(token) {
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 10003
+		respErr.ErrorMsg = "TOKEN_INVALID"
+
+		respError(ctx, respErr, 401)
+		return false
+	}
+
+	return true
 }
