@@ -52,6 +52,19 @@ func respSuccess(ctx *fasthttp.RequestCtx, respSuccess SuccessResponse, statusCo
 	return nil
 }
 
+func allowedMethod(ctx *fasthttp.RequestCtx, in string, allow string) {
+	if in != allow {
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 10002
+		respErr.ErrorMsg = "INVALID_REQUEST_METHOD"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+}
+
 func createToken() (string, error) {
 
 	var signPri []byte
@@ -59,17 +72,22 @@ func createToken() (string, error) {
 	signPri, err := getKeys("private")
 
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	signKey, err := jwt.ParseRSAPrivateKeyFromPEM(signPri)
+	if err != nil {
+		return "", err
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"user": UserStruct{
 			ID:       1,
 			Username: "omer",
 		},
 	})
 
-	tokenString, err := token.SignedString(signPri)
+	tokenString, err := token.SignedString(signKey)
 
 	if err != nil {
 		return "", err
@@ -88,12 +106,18 @@ func checkToken(tokenString string) bool {
 		panic(err)
 	}
 
+	signKey, err := jwt.ParseRSAPublicKeyFromPEM(signPub)
+
+	if err != nil {
+		panic(err)
+	}
+
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 
-		return signPub, nil
+		return signKey, nil
 	})
 
 	if err != nil {
@@ -114,7 +138,7 @@ func getKeys(keyType string) ([]byte, error) {
 	if keyType == "private" {
 		readedFile = settings["jwt"]["pri"].(string)
 	} else if keyType == "public" {
-		readedFile = settings["jwt"]["pri"].(string)
+		readedFile = settings["jwt"]["pub"].(string)
 	} else {
 		return nil, fmt.Errorf("invalid key type: %s", keyType)
 	}

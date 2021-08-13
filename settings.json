@@ -10,8 +10,8 @@
         "port": "8223"
     },
     "jwt": {
-        "pri": "./keys/pri",
-        "pub": "./keys/pub",
+        "pri": "./keys/pri.pem",
+        "pub": "./keys/pub.pem",
         "exp": "15000"
     }
 }

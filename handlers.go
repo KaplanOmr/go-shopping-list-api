@@ -14,7 +14,10 @@ func rootHandlers(ctx *fasthttp.RequestCtx) {
 
 	switch route {
 	case "/":
-		mainHandlers(ctx, method)
+		allowedMethod(ctx, method, "GET")
+		mainHandler(ctx, method)
+	case "/register":
+		allowedMethod(ctx, method, "POST")
 	default:
 		var resp ErrorResponse
 
@@ -26,7 +29,7 @@ func rootHandlers(ctx *fasthttp.RequestCtx) {
 	}
 }
 
-func mainHandlers(ctx *fasthttp.RequestCtx, method string) {
+func mainHandler(ctx *fasthttp.RequestCtx, method string) {
 
 	if method != "GET" {
 		var respErr ErrorResponse
@@ -45,4 +48,8 @@ func mainHandlers(ctx *fasthttp.RequestCtx, method string) {
 	resp.Data = "thanx"
 
 	respSuccess(ctx, resp, 200)
+}
+
+func registerHandler(ctx *fasthttp.RequestCtx, method string) {
+
 }
