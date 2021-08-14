@@ -24,7 +24,12 @@ func rootHandlers(ctx *fasthttp.RequestCtx) {
 
 	token := as[1]
 
-	if !authCheck(ctx, token, route, []string{"/", "/register"}) {
+	authAllowedURI := []string{
+		"/",
+		"/register",
+	}
+
+	if !authCheck(ctx, token, route, authAllowedURI) {
 		return
 	}
 

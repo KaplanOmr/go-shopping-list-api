@@ -1,14 +1,18 @@
 package main
 
 import (
+	"crypto/sha1"
 	"database/sql"
 	"fmt"
 
 	_ "github.com/lib/pq"
 )
 
-func conDB() (*sql.DB, error) {
-	getSettings()
+type AppDB struct {
+	DB *sql.DB
+}
+
+func (ad *AppDB) conDB() {
 
 	ct := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
@@ -20,9 +24,32 @@ func conDB() (*sql.DB, error) {
 
 	db, err := sql.Open("postgres", ct)
 	if err != nil {
-		return nil, err
+		fmt.Println(err)
 	}
 
-	return db, nil
+	ad.DB = db
+}
 
+func (ad *AppDB) createUser(u UserStruct) bool {
+
+	h := sha1.New()
+	h.Write([]byte(u.Password))
+
+	u.Password = fmt.Sprintf("%x", h.Sum(nil))
+
+	fmt.Println(u.Password)
+	_, e := ad.DB.Exec(
+		"INSERT INTO users(username,name,email,password) VALUES ($1,$2,$3,$4)",
+		u.Username,
+		u.Name,
+		u.Email,
+		u.Password,
+	)
+
+	if e != nil {
+		fmt.Println(e)
+		return false
+	}
+
+	return true
 }

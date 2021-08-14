@@ -17,13 +17,36 @@ type SuccessResponse struct {
 	Data   interface{} `json:"data"`
 }
 
+type UserInListStruct struct {
+	UserStruct
+	Lists []ListStruct `json:"lists"`
+}
+
 type ListStruct struct {
-	ID        int    `json:"id"`
-	Title     string `json:"title"`
-	UserID    int    `json:"user_id"`
-	Status    int    `json:"status"`
-	CreatedAt int    `json:"created_at"`
-	UpdatedAt int    `json:"updated_at"`
+	ID        int     `json:"id"`
+	Title     string  `json:"title"`
+	UserID    int     `json:"user_id"`
+	Status    int     `json:"status"`
+	CreatedAt int     `json:"created_at"`
+	UpdatedAt int     `json:"updated_at"`
+	TotalCost float32 `json:"total_cost"`
+}
+
+type ListInItemStruct struct {
+	ListStruct
+	Items []ItemStruct `json:"items"`
+}
+
+type ItemStruct struct {
+	ID        int     `json:"id"`
+	ListID    int     `json:"list_id"`
+	Title     string  `json:"title"`
+	Desc      string  `json:"desc"`
+	Priority  string  `json:"priority"`
+	Cost      float32 `json:"cost"`
+	Status    int     `json:"status"`
+	CreatedAt int     `json:"created_at"`
+	UpdatedAt int     `json:"updated_at"`
 }
 
 type UserStruct struct {
