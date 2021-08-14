@@ -53,7 +53,6 @@ func respSuccess(ctx *fasthttp.RequestCtx, respSuccess SuccessResponse, statusCo
 
 func allowedMethod(ctx *fasthttp.RequestCtx, in string, allow string) bool {
 	if in != allow {
-		fmt.Println("ok")
 		var respErr ErrorResponse
 
 		respErr.Status = false
@@ -95,7 +94,7 @@ func reqParams(ctx *fasthttp.RequestCtx, params []string) bool {
 	return c
 }
 
-func createToken() (string, error) {
+func createToken(u UserStruct) (string, error) {
 
 	var signPri []byte
 
@@ -111,10 +110,7 @@ func createToken() (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
-		"user": UserStruct{
-			ID:       1,
-			Username: "omer",
-		},
+		"user": u,
 	})
 
 	tokenString, err := token.SignedString(signKey)

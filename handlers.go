@@ -27,6 +27,7 @@ func rootHandlers(ctx *fasthttp.RequestCtx) {
 	authAllowedURI := []string{
 		"/",
 		"/register",
+		"/login",
 	}
 
 	if !authCheck(ctx, token, route, authAllowedURI) {
@@ -38,6 +39,8 @@ func rootHandlers(ctx *fasthttp.RequestCtx) {
 		mainHandler(ctx, method)
 	case "/register":
 		registerHandler(ctx, method)
+	case "/login":
+		loginHandler(ctx, method)
 	default:
 		var resp ErrorResponse
 
@@ -69,12 +72,112 @@ func registerHandler(ctx *fasthttp.RequestCtx, method string) {
 	}
 
 	params := []string{
-		"ok",
-		"ok2",
-		"ok3",
+		"username",
+		"email",
+		"name",
+		"password",
 	}
 
 	if !reqParams(ctx, params) {
 		return
 	}
+
+	var adb AppDB
+
+	adb.conDB()
+	defer adb.DB.Close()
+
+	var u UserStruct
+
+	u.Email = string(ctx.PostArgs().Peek("email"))
+	u.Username = string(ctx.PostArgs().Peek("username"))
+	u.Name = string(ctx.PostArgs().Peek("name"))
+	u.Password = string(ctx.PostArgs().Peek("password"))
+
+	if ec, check := adb.createUser(u); !check {
+		var respErr ErrorResponse
+
+		respErr.Status = false
+
+		switch ec {
+		case 1:
+			respErr.ErrorCode = 100011
+			respErr.ErrorMsg = "REGISTER_SERVER_ERROR"
+		case 2:
+			respErr.ErrorCode = 100012
+			respErr.ErrorMsg = "REGISTER_USERNAME_INVALID"
+		case 3:
+			respErr.ErrorCode = 100013
+			respErr.ErrorMsg = "REGISTER_EMAIL_INVALID"
+		}
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	var resp SuccessResponse
+
+	resp.Status = true
+	resp.Data = "CREATED_USER"
+
+	respSuccess(ctx, resp, 200)
+}
+
+func loginHandler(ctx *fasthttp.RequestCtx, method string) {
+	if !allowedMethod(ctx, method, "POST") {
+		return
+	}
+
+	params := []string{
+		"username",
+		"password",
+	}
+
+	if !reqParams(ctx, params) {
+		return
+	}
+
+	var adb AppDB
+
+	adb.conDB()
+	defer adb.DB.Close()
+
+	var u UserStruct
+
+	u.Password = string(ctx.PostArgs().Peek("password"))
+	u.Username = string(ctx.PostArgs().Peek("username"))
+
+	ru, check := adb.checkUser(u)
+
+	if !check {
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100020
+		respErr.ErrorMsg = "USER_INFO_INCORRET"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	t, err := createToken(ru)
+
+	if err != nil {
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100021
+		respErr.ErrorMsg = "LOGIN_ERROR"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	var resp SuccessResponse
+
+	resp.Status = true
+	resp.Data = t
+
+	respSuccess(ctx, resp, 200)
+
 }
