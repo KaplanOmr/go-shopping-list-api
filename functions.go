@@ -122,7 +122,7 @@ func createToken(u UserStruct) (string, error) {
 	return tokenString, nil
 }
 
-func checkToken(tokenString string) bool {
+func checkToken(tokenString string) (UserStruct, bool) {
 
 	var signPub []byte
 
@@ -130,14 +130,14 @@ func checkToken(tokenString string) bool {
 
 	if err != nil {
 		fmt.Println(err)
-		return false
+		return UserStruct{}, false
 	}
 
 	signKey, err := jwt.ParseRSAPublicKeyFromPEM(signPub)
 
 	if err != nil {
 		fmt.Println(err)
-		return false
+		return UserStruct{}, false
 	}
 
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
@@ -150,14 +150,23 @@ func checkToken(tokenString string) bool {
 
 	if err != nil {
 		fmt.Println(err)
-		return false
+		return UserStruct{}, false
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		userData = claims["user"]
-		return true
+		fmt.Println(claims["user"])
+		uraw := claims["user"].(map[string]interface{})
+
+		u := UserStruct{
+			ID:       int(uraw["id"].(float64)),
+			Name:     uraw["name"].(string),
+			Email:    uraw["email"].(string),
+			Username: uraw["username"].(string),
+		}
+
+		return u, true
 	} else {
-		return false
+		return UserStruct{}, false
 	}
 }
 
@@ -181,17 +190,30 @@ func getKeys(keyType string) ([]byte, error) {
 	return rf, nil
 }
 
-func authCheck(ctx *fasthttp.RequestCtx, token string, uri string, allow []string) bool {
-
-	c := false
+func authCheck(ctx *fasthttp.RequestCtx, auth []string, uri string, allow []string) (UserStruct, bool) {
 
 	for _, val := range allow {
 		if val == uri {
-			c = true
+			return UserStruct{}, true
 		}
 	}
 
-	if !c && !checkToken(token) {
+	if len(auth) != 2 {
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 10004
+		respErr.ErrorMsg = "AUTHORIZATION_INVALID"
+
+		respError(ctx, respErr, 401)
+		return UserStruct{}, false
+	}
+
+	token := auth[1]
+
+	u, c := checkToken(token)
+
+	if !c {
 		var respErr ErrorResponse
 
 		respErr.Status = false
@@ -199,8 +221,8 @@ func authCheck(ctx *fasthttp.RequestCtx, token string, uri string, allow []strin
 		respErr.ErrorMsg = "TOKEN_INVALID"
 
 		respError(ctx, respErr, 401)
-		return false
+		return UserStruct{}, false
 	}
 
-	return true
+	return u, true
 }

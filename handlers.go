@@ -1,56 +1,11 @@
 package main
 
 import (
-	"strings"
+	"fmt"
+	"strconv"
 
 	"github.com/valyala/fasthttp"
 )
-
-func rootHandlers(ctx *fasthttp.RequestCtx) {
-	route := string(ctx.Request.RequestURI())
-	method := string(ctx.Request.Header.Method())
-	as := strings.Split(string(ctx.Request.Header.Peek("Authorization")), " ")
-
-	if len(as) != 2 {
-		var respErr ErrorResponse
-
-		respErr.Status = false
-		respErr.ErrorCode = 10004
-		respErr.ErrorMsg = "AUTHORIZATION_INVALID"
-
-		respError(ctx, respErr, 401)
-		return
-	}
-
-	token := as[1]
-
-	authAllowedURI := []string{
-		"/",
-		"/register",
-		"/login",
-	}
-
-	if !authCheck(ctx, token, route, authAllowedURI) {
-		return
-	}
-
-	switch route {
-	case "/":
-		mainHandler(ctx, method)
-	case "/register":
-		registerHandler(ctx, method)
-	case "/login":
-		loginHandler(ctx, method)
-	default:
-		var resp ErrorResponse
-
-		resp.Status = false
-		resp.ErrorCode = 10001
-		resp.ErrorMsg = "INVALID_URI"
-
-		respError(ctx, resp, 400)
-	}
-}
 
 func mainHandler(ctx *fasthttp.RequestCtx, method string) {
 
@@ -179,5 +134,81 @@ func loginHandler(ctx *fasthttp.RequestCtx, method string) {
 	resp.Data = t
 
 	respSuccess(ctx, resp, 200)
+}
 
+func listCreateHandler(ctx *fasthttp.RequestCtx, method string, userData UserStruct) {
+	if !allowedMethod(ctx, method, "POST") {
+		return
+	}
+
+	params := []string{
+		"title",
+		"total_cost",
+		"status",
+	}
+
+	if !reqParams(ctx, params) {
+		return
+	}
+
+	tc, err := strconv.ParseFloat(string(ctx.PostArgs().Peek("total_cost")), 32)
+
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100044
+		respErr.ErrorMsg = "TOTAL_COST_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	status, err := strconv.Atoi(string(ctx.PostArgs().Peek("status")))
+
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100044
+		respErr.ErrorMsg = "STATUS_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	var newList ListStruct
+
+	newList.Title = string(ctx.PostArgs().Peek("title"))
+	newList.TotalCost = tc
+	newList.Status = status
+	newList.UserID = userData.ID
+
+	var adb AppDB
+
+	adb.conDB()
+	defer adb.DB.Close()
+
+	l, c := adb.listCreate(userData, newList)
+
+	if !c {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100084
+		respErr.ErrorMsg = "LIST_CREATE_ERR"
+
+		respError(ctx, respErr, 500)
+		return
+	}
+
+	var resp SuccessResponse
+
+	resp.Status = true
+	resp.Data = l
+
+	respSuccess(ctx, resp, 200)
 }

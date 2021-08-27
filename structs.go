@@ -1,7 +1,6 @@
 package main
 
 var (
-	userData interface{}
 	settings = getSettings()
 )
 
@@ -29,7 +28,7 @@ type ListStruct struct {
 	Status    int     `json:"status"`
 	CreatedAt int     `json:"created_at"`
 	UpdatedAt int     `json:"updated_at"`
-	TotalCost float32 `json:"total_cost"`
+	TotalCost float64 `json:"total_cost"`
 }
 
 type ListInItemStruct struct {
@@ -42,8 +41,8 @@ type ItemStruct struct {
 	ListID    int     `json:"list_id"`
 	Title     string  `json:"title"`
 	Desc      string  `json:"desc"`
-	Priority  string  `json:"priority"`
-	Cost      float32 `json:"cost"`
+	Priority  int     `json:"priority"`
+	Cost      float64 `json:"cost"`
 	Status    int     `json:"status"`
 	CreatedAt int     `json:"created_at"`
 	UpdatedAt int     `json:"updated_at"`

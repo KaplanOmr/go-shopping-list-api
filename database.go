@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"database/sql"
 	"fmt"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -98,7 +99,7 @@ func (adb *AppDB) checkUser(u UserStruct) (UserStruct, bool) {
 	}
 
 	if r.Next() {
-		err = r.Scan(&u.ID, &u.Username, &u.Name, &u.Password)
+		err = r.Scan(&u.ID, &u.Username, &u.Name, &u.Email)
 
 		if err != nil {
 			fmt.Println(err)
@@ -109,4 +110,30 @@ func (adb *AppDB) checkUser(u UserStruct) (UserStruct, bool) {
 	}
 
 	return UserStruct{}, false
+}
+
+func (adb *AppDB) listCreate(u UserStruct, l ListStruct) (ListStruct, bool) {
+
+	t := time.Now().Unix()
+
+	var lid int
+
+	err := adb.DB.QueryRow(
+		"INSERT INTO lists(title,user_id,total_cost,status,created_at) VALUES ($1,$2,$3,$4,$5) RETURNING id;",
+		l.Title,
+		u.ID,
+		l.TotalCost,
+		l.Status,
+		t,
+	).Scan(&lid)
+
+	if err != nil {
+		fmt.Println(err)
+		return ListStruct{}, false
+	}
+
+	l.ID = lid
+	l.CreatedAt = int(t)
+
+	return l, true
 }
