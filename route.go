@@ -32,6 +32,8 @@ func rootHandlers(ctx *fasthttp.RequestCtx) {
 		loginHandler(ctx, method)
 	case "/list/create":
 		listCreateHandler(ctx, method, userData)
+	case "/list/get_all":
+		listGetAllHandler(ctx, method, userData)
 	default:
 		var resp ErrorResponse
 

@@ -151,7 +151,7 @@ func listCreateHandler(ctx *fasthttp.RequestCtx, method string, userData UserStr
 		return
 	}
 
-	tc, err := strconv.ParseFloat(string(ctx.PostArgs().Peek("total_cost")), 32)
+	tc, err := strconv.ParseFloat(string(ctx.PostArgs().Peek("total_cost")), 64)
 
 	if err != nil {
 		fmt.Println(err)
@@ -209,6 +209,51 @@ func listCreateHandler(ctx *fasthttp.RequestCtx, method string, userData UserStr
 
 	resp.Status = true
 	resp.Data = l
+
+	respSuccess(ctx, resp, 200)
+}
+
+func listGetAllHandler(ctx *fasthttp.RequestCtx, method string, userData UserStruct) {
+	if !allowedMethod(ctx, method, "POST") {
+		return
+	}
+
+	params := []string{
+		"desc",
+		"limit",
+		"offset",
+	}
+
+	if !reqParams(ctx, params) {
+		return
+	}
+
+	desc := string(ctx.PostArgs().Peek("desc"))
+	limit := string(ctx.PostArgs().Peek("limit"))
+	offset := string(ctx.PostArgs().Peek("offset"))
+
+	var adb AppDB
+
+	adb.conDB()
+	defer adb.DB.Close()
+
+	lists, c := adb.listGetAll(userData, desc, limit, offset)
+
+	if !c {
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100085
+		respErr.ErrorMsg = "LIST_GET_ERR"
+
+		respError(ctx, respErr, 500)
+		return
+	}
+
+	var resp SuccessResponse
+
+	resp.Status = true
+	resp.Data = lists
 
 	respSuccess(ctx, resp, 200)
 }

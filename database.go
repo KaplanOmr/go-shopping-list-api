@@ -119,11 +119,12 @@ func (adb *AppDB) listCreate(u UserStruct, l ListStruct) (ListStruct, bool) {
 	var lid int
 
 	err := adb.DB.QueryRow(
-		"INSERT INTO lists(title,user_id,total_cost,status,created_at) VALUES ($1,$2,$3,$4,$5) RETURNING id;",
+		"INSERT INTO lists(title,user_id,total_cost,status,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id;",
 		l.Title,
 		u.ID,
 		l.TotalCost,
 		l.Status,
+		t,
 		t,
 	).Scan(&lid)
 
@@ -136,4 +137,53 @@ func (adb *AppDB) listCreate(u UserStruct, l ListStruct) (ListStruct, bool) {
 	l.CreatedAt = int(t)
 
 	return l, true
+}
+
+func (adb *AppDB) listGetAll(u UserStruct, desc, limit, offset string) ([]ListStruct, bool) {
+
+	var lists []ListStruct
+
+	if desc == "first" {
+		desc = "ASC"
+	} else {
+		desc = "DESC"
+	}
+
+	sql := fmt.Sprintf(
+		"SELECT id,user_id,title,total_cost,status,created_at,updated_at FROM lists WHERE deleted_at IS NULL AND user_id = $1 ORDER BY created_at %s LIMIT $2 OFFSET $3",
+		desc,
+	)
+
+	result, err := adb.DB.Query(
+		sql,
+		u.ID,
+		limit,
+		offset,
+	)
+
+	if err != nil {
+		fmt.Println(err)
+		return []ListStruct{}, false
+	}
+
+	for result.Next() {
+		var list ListStruct
+		err = result.Scan(
+			&list.ID,
+			&list.UserID,
+			&list.Title,
+			&list.TotalCost,
+			&list.Status,
+			&list.CreatedAt,
+			&list.UpdatedAt,
+		)
+
+		if err != nil {
+			fmt.Println(err)
+			return []ListStruct{}, false
+		}
+		lists = append(lists, list)
+	}
+
+	return lists, true
 }
