@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha1"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -150,7 +151,7 @@ func (adb *AppDB) listGetAll(u UserStruct, desc, limit, offset string) ([]ListSt
 	}
 
 	sql := fmt.Sprintf(
-		"SELECT id,user_id,title,total_cost,status,created_at,updated_at FROM lists WHERE deleted_at IS NULL AND user_id = $1 ORDER BY created_at %s LIMIT $2 OFFSET $3",
+		"SELECT id,title,total_cost,status,created_at,updated_at FROM lists WHERE deleted_at IS NULL AND user_id = $1 ORDER BY created_at %s LIMIT $2 OFFSET $3",
 		desc,
 	)
 
@@ -170,7 +171,6 @@ func (adb *AppDB) listGetAll(u UserStruct, desc, limit, offset string) ([]ListSt
 		var list ListStruct
 		err = result.Scan(
 			&list.ID,
-			&list.UserID,
 			&list.Title,
 			&list.TotalCost,
 			&list.Status,
@@ -186,4 +186,87 @@ func (adb *AppDB) listGetAll(u UserStruct, desc, limit, offset string) ([]ListSt
 	}
 
 	return lists, true
+}
+
+func (adb *AppDB) listGet(u UserStruct, id int) (ListStruct, bool) {
+
+	var l ListStruct
+
+	err := adb.DB.QueryRow(
+		"SELECT id, title, total_cost, status, created_at, updated_at FROM lists WHERE deleted_at IS NULL AND user_id = $1 AND id = $2 LIMIT 1",
+		u.ID,
+		id,
+	).Scan(
+		&l.ID,
+		&l.Title,
+		&l.TotalCost,
+		&l.Status,
+		&l.CreatedAt,
+		&l.UpdatedAt,
+	)
+
+	if err != nil {
+		fmt.Println(err)
+		return ListStruct{}, false
+	}
+
+	return l, true
+}
+
+func (adb *AppDB) listUpdate(u UserStruct, title string, status, id int) bool {
+
+	t := time.Now().Unix()
+
+	up, err := adb.DB.Exec(
+		"UPDATE lists SET title = $1, status = $2, updated_at = $3 WHERE id = $4 AND user_id = $5",
+		title,
+		status,
+		t,
+		id,
+		u.ID,
+	)
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	count, err := up.RowsAffected()
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	if count == 0 {
+		fmt.Println(errors.New("ZERO AFFECT"))
+		return false
+	}
+
+	return true
+}
+
+func (adb *AppDB) listDelete(u UserStruct, id int) bool {
+	t := time.Now().Unix()
+
+	del, err := adb.DB.Exec(
+		"UPDATE lists SET deleted_at = $1 WHERE deleted_at IS NULL AND user_id = $2 AND id = $3",
+		t,
+		u.ID,
+		id,
+	)
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	count, err := del.RowsAffected()
+
+	if count == 0 {
+		fmt.Println(errors.New("ZERO AFFECT"))
+		return false
+	}
+
+	return true
 }

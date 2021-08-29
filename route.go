@@ -1,13 +1,22 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/valyala/fasthttp"
 )
 
 func rootHandlers(ctx *fasthttp.RequestCtx) {
-	route := string(ctx.Request.RequestURI())
+	fmt.Printf(
+		"# REQUEST: %s | HEADER: %s | GET: %s | BODY: %s \n",
+		ctx.RemoteAddr().String(),
+		string(ctx.Request.Header.Peek("Authorization")),
+		string(ctx.RequestURI()),
+		string(ctx.PostArgs().QueryString()),
+	)
+
+	route := string(ctx.Request.URI().Path())
 	method := string(ctx.Request.Header.Method())
 	auth := strings.Split(string(ctx.Request.Header.Peek("Authorization")), " ")
 
@@ -34,6 +43,12 @@ func rootHandlers(ctx *fasthttp.RequestCtx) {
 		listCreateHandler(ctx, method, userData)
 	case "/list/get_all":
 		listGetAllHandler(ctx, method, userData)
+	case "/list/get":
+		listGetHandler(ctx, method, userData)
+	case "/list/update":
+		listUpdateHandler(ctx, method, userData)
+	case "/list/delete":
+		listDeleteHandler(ctx, method, userData)
 	default:
 		var resp ErrorResponse
 

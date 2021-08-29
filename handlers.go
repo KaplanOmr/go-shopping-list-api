@@ -33,7 +33,7 @@ func registerHandler(ctx *fasthttp.RequestCtx, method string) {
 		"password",
 	}
 
-	if !reqParams(ctx, params) {
+	if !reqPostParams(ctx, params) {
 		return
 	}
 
@@ -88,7 +88,7 @@ func loginHandler(ctx *fasthttp.RequestCtx, method string) {
 		"password",
 	}
 
-	if !reqParams(ctx, params) {
+	if !reqPostParams(ctx, params) {
 		return
 	}
 
@@ -147,7 +147,7 @@ func listCreateHandler(ctx *fasthttp.RequestCtx, method string, userData UserStr
 		"status",
 	}
 
-	if !reqParams(ctx, params) {
+	if !reqPostParams(ctx, params) {
 		return
 	}
 
@@ -184,7 +184,6 @@ func listCreateHandler(ctx *fasthttp.RequestCtx, method string, userData UserStr
 	newList.Title = string(ctx.PostArgs().Peek("title"))
 	newList.TotalCost = tc
 	newList.Status = status
-	newList.UserID = userData.ID
 
 	var adb AppDB
 
@@ -219,16 +218,16 @@ func listGetAllHandler(ctx *fasthttp.RequestCtx, method string, userData UserStr
 	}
 
 	params := []string{
-		"desc",
+		"sortby",
 		"limit",
 		"offset",
 	}
 
-	if !reqParams(ctx, params) {
+	if !reqPostParams(ctx, params) {
 		return
 	}
 
-	desc := string(ctx.PostArgs().Peek("desc"))
+	desc := string(ctx.PostArgs().Peek("sortby"))
 	limit := string(ctx.PostArgs().Peek("limit"))
 	offset := string(ctx.PostArgs().Peek("offset"))
 
@@ -254,6 +253,170 @@ func listGetAllHandler(ctx *fasthttp.RequestCtx, method string, userData UserStr
 
 	resp.Status = true
 	resp.Data = lists
+
+	respSuccess(ctx, resp, 200)
+}
+
+func listGetHandler(ctx *fasthttp.RequestCtx, method string, userData UserStruct) {
+	if !allowedMethod(ctx, method, "GET") {
+		return
+	}
+
+	params := []string{"id"}
+
+	if !reqGetParams(ctx, params) {
+		return
+	}
+
+	id, err := strconv.Atoi(string(ctx.QueryArgs().Peek("id")))
+
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100086
+		respErr.ErrorMsg = "ID_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	var adb AppDB
+	adb.conDB()
+	defer adb.DB.Close()
+
+	l, c := adb.listGet(userData, id)
+
+	if !c {
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100085
+		respErr.ErrorMsg = "LIST_GET_ERR"
+
+		respError(ctx, respErr, 500)
+		return
+	}
+
+	var resp SuccessResponse
+
+	resp.Status = true
+	resp.Data = l
+
+	respSuccess(ctx, resp, 200)
+}
+
+func listUpdateHandler(ctx *fasthttp.RequestCtx, method string, userData UserStruct) {
+	if !allowedMethod(ctx, method, "POST") {
+		return
+	}
+
+	getParams := []string{"id"}
+	postParams := []string{"title", "status"}
+
+	if !reqGetParams(ctx, getParams) || !reqPostParams(ctx, postParams) {
+		return
+	}
+
+	id, err := strconv.Atoi(string(ctx.QueryArgs().Peek("id")))
+
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100086
+		respErr.ErrorMsg = "ID_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	title := string(ctx.PostArgs().Peek("title"))
+	status, err := strconv.Atoi(string(ctx.PostArgs().Peek("status")))
+
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100086
+		respErr.ErrorMsg = "STATUS_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	var adb AppDB
+	adb.conDB()
+	defer adb.DB.Close()
+
+	c := adb.listUpdate(userData, title, status, id)
+
+	if !c {
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100095
+		respErr.ErrorMsg = "LIST_UP_ERR"
+
+		respError(ctx, respErr, 500)
+		return
+	}
+
+	var resp SuccessResponse
+
+	resp.Status = true
+
+	respSuccess(ctx, resp, 200)
+}
+
+func listDeleteHandler(ctx *fasthttp.RequestCtx, method string, userData UserStruct) {
+	if !allowedMethod(ctx, method, "GET") {
+		return
+	}
+
+	params := []string{"id"}
+
+	if !reqGetParams(ctx, params) {
+		return
+	}
+
+	id, err := strconv.Atoi(string(ctx.QueryArgs().Peek("id")))
+
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100086
+		respErr.ErrorMsg = "ID_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	var adb AppDB
+	adb.conDB()
+	defer adb.DB.Close()
+
+	c := adb.listDelete(userData, id)
+
+	if !c {
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100099
+		respErr.ErrorMsg = "LIST_DEL_ERR"
+
+		respError(ctx, respErr, 500)
+		return
+	}
+
+	var resp SuccessResponse
+
+	resp.Status = true
 
 	respSuccess(ctx, resp, 200)
 }

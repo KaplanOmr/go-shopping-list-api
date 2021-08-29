@@ -34,6 +34,12 @@ func respError(ctx *fasthttp.RequestCtx, respErr ErrorResponse, statusCode int) 
 		panic(err)
 	}
 
+	fmt.Printf(
+		"# RESPONSE: %s | STATUS: false | BODY: %s \n",
+		ctx.RemoteAddr().String(),
+		string(rb),
+	)
+
 	ctx.Response.SetStatusCode(statusCode)
 	ctx.Response.Header.Add("Content-Type", "application/json")
 	ctx.Response.SetBody(rb)
@@ -45,6 +51,12 @@ func respSuccess(ctx *fasthttp.RequestCtx, respSuccess SuccessResponse, statusCo
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Printf(
+		"# RESPONSE: %s | STATUS: true | BODY: %s \n",
+		ctx.RemoteAddr().String(),
+		string(rb),
+	)
 
 	ctx.Response.SetStatusCode(statusCode)
 	ctx.Response.Header.Add("Content-Type", "application/json")
@@ -67,12 +79,39 @@ func allowedMethod(ctx *fasthttp.RequestCtx, in string, allow string) bool {
 	return true
 }
 
-func reqParams(ctx *fasthttp.RequestCtx, params []string) bool {
+func reqPostParams(ctx *fasthttp.RequestCtx, params []string) bool {
 
 	c := true
 
 	for _, p := range params {
 		if !ctx.PostArgs().Has(p) {
+			c = false
+		}
+	}
+
+	if !c {
+		var resp ErrorResponse
+
+		resp.Status = false
+		resp.ErrorCode = 10010
+		resp.ErrorMsg = "REQUIRED_PARAMS_INVALID"
+		resp.Data = map[string][]string{
+			"required_params": params,
+		}
+
+		respError(ctx, resp, 200)
+
+	}
+
+	return c
+}
+
+func reqGetParams(ctx *fasthttp.RequestCtx, params []string) bool {
+
+	c := true
+
+	for _, p := range params {
+		if !ctx.QueryArgs().Has(p) {
 			c = false
 		}
 	}
@@ -154,7 +193,6 @@ func checkToken(tokenString string) (UserStruct, bool) {
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		fmt.Println(claims["user"])
 		uraw := claims["user"].(map[string]interface{})
 
 		u := UserStruct{

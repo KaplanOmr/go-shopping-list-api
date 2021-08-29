@@ -24,7 +24,6 @@ type UserInListStruct struct {
 type ListStruct struct {
 	ID        int     `json:"id"`
 	Title     string  `json:"title"`
-	UserID    int     `json:"user_id"`
 	Status    int     `json:"status"`
 	CreatedAt int     `json:"created_at"`
 	UpdatedAt int     `json:"updated_at"`
