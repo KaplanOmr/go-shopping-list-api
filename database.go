@@ -270,3 +270,72 @@ func (adb *AppDB) listDelete(u UserStruct, id int) bool {
 
 	return true
 }
+
+func (adb *AppDB) listItemCreate(u UserStruct, li ItemStruct) (ItemStruct, bool) {
+
+	cu := adb.checkListUser(u.ID, li.ListID)
+
+	if !cu {
+		return ItemStruct{}, false
+	}
+
+	t := time.Now().Unix()
+
+	var lid int
+	fmt.Println(li.Desc)
+	err := adb.DB.QueryRow(
+		"INSERT INTO items(list_id, title, description, priority, cost, status, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id;",
+		li.ListID,
+		li.Title,
+		li.Desc,
+		li.Priority,
+		li.Cost,
+		li.Status,
+		t,
+	).Scan(&lid)
+
+	if err != nil {
+		fmt.Println(err)
+		return ItemStruct{}, false
+	}
+
+	var tc float32
+
+	err = adb.DB.QueryRow(
+		"SELECT SUM(cost) AS tc FROM items WHERE list_id = $1 GROUP BY list_id",
+		li.ListID,
+		).Scan(&tc)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	_, err = adb.DB.Query(
+		"UPDATE lists SET total_cost = $1 WHERE id = $2",
+		tc,
+		li.ListID,
+	)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	li.ID = lid
+	li.CreatedAt = int(t)
+
+	return li, true
+}
+
+func (adb *AppDB) checkListUser(uid int, lid int) bool {
+
+	var c int
+
+	err := adb.DB.QueryRow("SELECT id FROM lists WHERE id = $1 AND user_id = $2 LIMIT 1",lid,uid).Scan(&c)
+
+	if err != nil || c > 0 {
+		fmt.Println(err)
+		return false
+	}
+
+	return true
+}

@@ -49,6 +49,10 @@ func rootHandlers(ctx *fasthttp.RequestCtx) {
 		listUpdateHandler(ctx, method, userData)
 	case "/list/delete":
 		listDeleteHandler(ctx, method, userData)
+	case "/list/item/create":
+		listItemCreateHandler(ctx, method, userData)
+	case "/list/item/update":
+		listItemCreateHandler(ctx, method, userData)
 	default:
 		var resp ErrorResponse
 

@@ -420,3 +420,99 @@ func listDeleteHandler(ctx *fasthttp.RequestCtx, method string, userData UserStr
 
 	respSuccess(ctx, resp, 200)
 }
+
+func listItemCreateHandler(ctx *fasthttp.RequestCtx, method string, userData UserStruct) {
+	if !allowedMethod(ctx, method, "POST") {
+		return
+	}
+
+	params := []string{
+		"list_id",
+		"title",
+		"desc",
+		"priority",
+		"cost",
+		"status",
+	}
+
+	if !reqPostParams(ctx, params) {
+		return
+	}
+
+	cost, err := strconv.ParseFloat(string(ctx.PostArgs().Peek("cost")), 64)
+
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100144
+		respErr.ErrorMsg = "COST_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	status, err := strconv.Atoi(string(ctx.PostArgs().Peek("status")))
+
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100144
+		respErr.ErrorMsg = "STATUS_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	lid, err := strconv.Atoi(string(ctx.PostArgs().Peek("list_id")))
+
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100144
+		respErr.ErrorMsg = "LIST_ID_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	var newListItem ItemStruct
+
+	newListItem.Title = string(ctx.PostArgs().Peek("title"))
+	newListItem.Desc = string(ctx.PostArgs().Peek("desc"))
+	newListItem.Cost = cost
+	newListItem.Status = status
+	newListItem.ListID = lid
+
+	var adb AppDB
+
+	adb.conDB()
+	defer adb.DB.Close()
+
+	li, c := adb.listItemCreate(userData, newListItem)
+
+	if !c {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100184
+		respErr.ErrorMsg = "LIST_ITEM_CREATE_ERR"
+
+		respError(ctx, respErr, 500)
+		return
+	}
+
+	var resp SuccessResponse
+
+	resp.Status = true
+	resp.Data = li
+
+	respSuccess(ctx, resp, 200)
+}
+

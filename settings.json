@@ -4,7 +4,7 @@
         "password": "123",
         "port": "5432",
         "hostname": "localhost",
-        "database": "postgres"
+        "database": "sladb"
     },
     "server": {
         "port": "8223"
