@@ -467,6 +467,20 @@ func listItemCreateHandler(ctx *fasthttp.RequestCtx, method string, userData Use
 		return
 	}
 
+	priority, err := strconv.Atoi(string(ctx.PostArgs().Peek("priority")))
+
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100144
+		respErr.ErrorMsg = "PRIORITY_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
 	lid, err := strconv.Atoi(string(ctx.PostArgs().Peek("list_id")))
 
 	if err != nil {
@@ -488,6 +502,7 @@ func listItemCreateHandler(ctx *fasthttp.RequestCtx, method string, userData Use
 	newListItem.Cost = cost
 	newListItem.Status = status
 	newListItem.ListID = lid
+	newListItem.Priority = priority
 
 	var adb AppDB
 
@@ -512,6 +527,179 @@ func listItemCreateHandler(ctx *fasthttp.RequestCtx, method string, userData Use
 
 	resp.Status = true
 	resp.Data = li
+
+	respSuccess(ctx, resp, 200)
+}
+
+func listItemUpdateHandler(ctx *fasthttp.RequestCtx, method string, userData UserStruct) {
+	if !allowedMethod(ctx, method, "POST") {
+		return
+	}
+
+	getParams := []string{"id"}
+	postParams := []string{
+		"title",
+		"status",
+		"desc",
+		"priority",
+		"cost",
+		"status",
+	}
+
+	if !reqGetParams(ctx, getParams) || !reqPostParams(ctx, postParams) {
+		return
+	}
+
+	var uli ItemStruct
+	var err error
+
+	uli.ID, err = strconv.Atoi(string(ctx.QueryArgs().Peek("id")))
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100086
+		respErr.ErrorMsg = "ID_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	uli.Title = string(ctx.PostArgs().Peek("title"))
+	uli.Status, err = strconv.Atoi(string(ctx.PostArgs().Peek("status")))
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100186
+		respErr.ErrorMsg = "STATUS_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+	uli.Priority, err = strconv.Atoi(string(ctx.PostArgs().Peek("priority")))
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100086
+		respErr.ErrorMsg = "PRIORITY_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+	uli.Cost, err = strconv.ParseFloat(string(ctx.PostArgs().Peek("cost")), 64)
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100186
+		respErr.ErrorMsg = "COST_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+	uli.ListID, err = strconv.Atoi(string(ctx.PostArgs().Peek("list_id")))
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100186
+		respErr.ErrorMsg = "COST_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	var adb AppDB
+	adb.conDB()
+	defer adb.DB.Close()
+
+	c := adb.listItemUpdate(userData, uli)
+
+	if !c {
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100195
+		respErr.ErrorMsg = "LIST_ITEM_UP_ERR"
+
+		respError(ctx, respErr, 500)
+		return
+	}
+
+	var resp SuccessResponse
+
+	resp.Status = true
+
+	respSuccess(ctx, resp, 200)
+}
+
+func listItemDeleteHandler(ctx *fasthttp.RequestCtx, method string, userData UserStruct) {
+	if !allowedMethod(ctx, method, "GET") {
+		return
+	}
+
+	getParams := []string{"id","list_id"}
+
+	if !reqGetParams(ctx, getParams) {
+		return
+	}
+
+	var dli ItemStruct
+	var err error
+
+	dli.ID, err = strconv.Atoi(string(ctx.QueryArgs().Peek("id")))
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100186
+		respErr.ErrorMsg = "ID_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	dli.ListID, err = strconv.Atoi(string(ctx.QueryArgs().Peek("list_id")))
+	if err != nil {
+		fmt.Println(err)
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100186
+		respErr.ErrorMsg = "LIST_ID_PARAMETER_INVALID"
+
+		respError(ctx, respErr, 400)
+		return
+	}
+
+	var adb AppDB
+	adb.conDB()
+	defer adb.DB.Close()
+
+	c := adb.listItemDelete(userData, dli)
+
+	if !c {
+		var respErr ErrorResponse
+
+		respErr.Status = false
+		respErr.ErrorCode = 100199
+		respErr.ErrorMsg = "LIST_ITEM_DEL_ERR"
+
+		respError(ctx, respErr, 500)
+		return
+	}
+
+	var resp SuccessResponse
+
+	resp.Status = true
 
 	respSuccess(ctx, resp, 200)
 }
